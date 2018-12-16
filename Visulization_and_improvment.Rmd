@@ -1,0 +1,368 @@
+---
+title: "Feature_engineering"
+output: word_document
+---
+```{r}
+#Getting Dataset
+url= "https://archive.ics.uci.edu/ml/machine-learning-databases/molecular-biology/promoter-gene-sequences/promoters.data"
+gene <-  as.data.frame(read.table(file = url, header = FALSE, dec = '.', sep = ","))
+
+#colnames(ecoli) <- c("Sequence Name", "mcg", "gvh", "lip", "chg", "aac", "alm1", "alm2","class")
+#colnames(german)[21] <- "class"
+gene
+```
+```{r}
+a = as.matrix(gene[3])
+library(stringr)
+b=str_sub(a, -57)
+b = as.matrix(b)
+c<-strsplit(b,'')
+d=matrix(nrow=106,ncol=57)
+for (i in 1:106){
+  for (j in 1:57){
+    d[i,j]= c[[i]][j]
+  }
+}
+f= as.data.frame(d)
+f
+```
+```{r}
+gene = cbind(gene[1],f)
+colnames(gene)[1] <- "class"
+gene
+```
+
+```{r}
+library(mlr)
+# creatw task
+train.task <- makeClassifTask(data = gene, target = "class")
+# View variable selection options
+listFilterMethods()
+var_imp <- generateFilterValuesData(train.task, method = "gain.ratio")
+plotFilterValues(var_imp, feat.type.cols = TRUE)
+```
+
+```{r}
+library(mlr)
+
+train.task <- makeClassifTask(data = gene, target = "class")
+var_imp <- generateFilterValuesData(train.task, method = "chi.squared")
+
+plotFilterValues(var_imp, feat.type.cols = TRUE)
+```
+
+```{r}
+gene.n = gene[c( "V15","V17","V16","V39","class")]
+function_cv_nbc <- function(yourData){
+  require(caret)
+  set.seed(100)
+  folds<-createFolds(y=yourData$class,k=5)
+  accuracy_list2=c()
+#Perform 5 fold cross validation
+for(i in 1:5){
+    #Segement your data by fold using the which() function 
+    train_cv<-yourData[-folds[[i]],]
+    test_cv<-yourData[folds[[i]],]
+     #Naive Bayes Classifier
+      # Installing e1071
+      library(e1071)
+      # Applying Naive Bayes
+      nbc <- naiveBayes(class ~., data =train_cv )
+      # Making predictions
+      prediction2 <- predict(nbc, test_cv, type="class")
+      cm2 <- table(test_cv$class, prediction2, dnn = c("Real Values", "Predictions"))
+      #Calculating Accuracy
+      n2 = diag(cm2)
+      accuracy2 <- sum(n2)/sum(cm2)
+      accuracy_list2[i] = accuracy2
+}
+a2 = sum(accuracy_list2)/5
+return(a2)
+}
+function_cv_nbc(yourData = gene)
+function_cv_nbc(yourData = gene.n)
+```
+
+```{r}
+function_cv_rf<- function(yourData){
+  require(caret)
+  set.seed(100)
+  folds<-createFolds(y=yourData$class,k=5)
+  accuracy_list3=c()
+#Perform 5 fold cross validation
+for(i in 1:5){
+    #Segement your data by fold using the which() function 
+    train_cv<-yourData[-folds[[i]],]
+    test_cv<-yourData[folds[[i]],]
+     #rf
+    library(randomForest)   
+ 
+rf=randomForest(class~.,yourData[ind==1,],ntree=50,nPerm=10,mtry=3,proximity=TRUE,importance=TRUE)   
+rf.pred=predict( rf,yourData[ind==2,] )   
+cm3 = table(observed=yourData[ind==2,"class"],predicted=rf.pred )
+n3 = diag(cm3)
+ac3 <- sum(n3)/sum(cm3)
+
+      accuracy_list3[i] = ac3
+}
+a1 = sum(accuracy_list3)/5
+return(a1)
+}
+```
+
+```{r}
+function_cv_rf(yourData =gene)
+function_cv_rf(yourData = gene.n)
+
+```
+
+```{r}
+#Getting Dataset
+url= "https://archive.ics.uci.edu/ml/machine-learning-databases/ecoli/ecoli.data"
+ecoli <-  as.data.frame(read.table(file = url, header = FALSE, dec = ".", sep = ""))
+colnames(ecoli) <- c("Sequence_Name", "mcg", "gvh", "lip", "chg", "aac", "alm1", "alm2","class")
+ecoli
+```
+
+```{r}
+library(mlr)
+# creatw task
+train.task <- makeClassifTask(data = ecoli, target = "class")
+var_imp <- generateFilterValuesData(train.task, method = "gain.ratio")
+plotFilterValues(var_imp, feat.type.cols = TRUE)
+```
+```{r}
+library(corrplot)
+corrplot(cor(ecoli[,c(2:8)]), order = "hclust")
+```
+```{r}
+ecoli.n = ecoli[c( "alm2","lip","gvh","mcg","aac","class")]
+ecoli.s <- ecoli[c( "alm1","alm2","lip","gvh","mcg","aac","class")] 
+function_cv_nbc(yourData = ecoli)
+function_cv_nbc(yourData = ecoli.s)
+function_cv_nbc(yourData = ecoli.n)
+```
+```{r}
+#Getting Dataset
+url= "https://archive.ics.uci.edu/ml/machine-learning-databases/statlog/german/german.data"
+german <-  as.data.frame(read.table(file = url, header = FALSE, dec = ".", sep = ""))
+colnames(german)[21] <- "class"
+german
+```
+```{r}
+german[21] <- as.factor(x = german [[21]])
+library(plyr)
+german$class <- revalue(german$class, c("1" = "good", "2" = "bad" ))
+```
+
+```{r}
+library(mlr)
+# creatw task
+train.task <- makeClassifTask(data = german, target = "class")
+var_imp <- generateFilterValuesData(train.task, method = "gain.ratio")
+plotFilterValues(var_imp, feat.type.cols = TRUE)
+```
+```{r}
+library(mlr)
+
+train.task <- makeClassifTask(data = german, target = "class")
+var_imp <- generateFilterValuesData(train.task, method = "chi.squared")
+
+plotFilterValues(var_imp, feat.type.cols = TRUE)
+```
+```{r}
+german.n = german[c( "V1","V3","V4","V2","V5","V6","V20","V15","V14", "V10","V12","V7","V9","class")]
+function_cv_nbc(yourData = german)
+function_cv_nbc(yourData = german.n) 
+```
+```{r}
+#Getting Dataset
+url= "https://archive.ics.uci.edu/ml/machine-learning-databases/chess/king-rook-vs-king-pawn/kr-vs-kp.data"
+krkp <-  as.data.frame(read.table(file = url, header = FALSE, dec = ".", sep = ","))
+colnames(krkp)[37] <- "class"
+krkp
+```
+```{r}
+library(mlr)
+# creatw task
+train.task <- makeClassifTask(data = krkp, target = "class")
+var_imp <- generateFilterValuesData(train.task, method = "gain.ratio")
+plotFilterValues(var_imp, feat.type.cols = TRUE)
+```
+```{r}
+library(mlr)
+
+train.task <- makeClassifTask(data = krkp, target = "class")
+var_imp <- generateFilterValuesData(train.task, method = "chi.squared")
+
+plotFilterValues(var_imp, feat.type.cols = TRUE)
+```
+```{r}
+krkp.n =krkp[c( "V21","V29","V10","V14","V33","V32","class")]
+function_cv_nbc(yourData = krkp)
+function_cv_nbc(yourData = krkp.n) 
+```
+```{r}
+#Getting Dataset
+url= "https://archive.ics.uci.edu/ml/machine-learning-databases/monks-problems/monks-1.test"
+monk <-  as.data.frame(read.table(file = url, header = FALSE, dec = ".", sep = ""))
+monk = monk[,1:7]
+colnames(monk)[1] <- "class"
+monk.o = monk
+for (i in 1:7){
+monk[i] <- as.factor(x = monk[[i]])
+}
+monk
+```
+```{r}
+library(mlr)
+# creatw task
+train.task <- makeClassifTask(data = monk, target = "class")
+var_imp <- generateFilterValuesData(train.task, method = "gain.ratio")
+plotFilterValues(var_imp, feat.type.cols = TRUE)
+```
+```{r}
+library(mlr)
+
+train.task <- makeClassifTask(data = monk, target = "class")
+var_imp <- generateFilterValuesData(train.task, method = "chi.squared")
+
+plotFilterValues(var_imp, feat.type.cols = TRUE)
+```
+```{r}
+
+library(corrplot)
+corrplot(cor(monk.o), order = "hclust")
+```
+```{r}
+monk.n =monk[c("V6","class")]
+monk.s <- monk[c( "V2","V3","V4","V6","class")]
+function_cv_nbc(yourData = monk)
+function_cv_nbc(yourData = monk.s)
+function_cv_nbc(yourData = monk.n) 
+```
+```{r}
+#Getting Dataset
+url= "https://archive.ics.uci.edu/ml/machine-learning-databases/mushroom/agaricus-lepiota.data"
+mushroom <-  as.data.frame(read.table(file = url, header = FALSE, dec = ".", sep = ","))
+#colnames(ecoli) <- c("Sequence Name", "mcg", "gvh", "lip", "chg", "aac", "alm1", "alm2","class")
+colnames(mushroom)[1] <- "class"
+mushroom
+```
+```{r}
+library(mlr)
+# creatw task
+train.task <- makeClassifTask(data = mushroom, target = "class")
+var_imp <- generateFilterValuesData(train.task, method = "gain.ratio")
+plotFilterValues(var_imp, feat.type.cols = TRUE)
+```
+```{r}
+library(mlr)
+
+train.task <- makeClassifTask(data = mushroom, target = "class")
+var_imp <- generateFilterValuesData(train.task, method = "chi.squared")
+
+plotFilterValues(var_imp, feat.type.cols = TRUE)
+```
+```{r}
+mushroom.n =mushroom[c("V6","V9","V13","class")]
+function_cv_nbc(yourData = mushroom)
+function_cv_nbc(yourData = mushroom.n) 
+```
+```{r}
+#Getting Dataset
+url= "https://archive.ics.uci.edu/ml/machine-learning-databases/soybean/soybean-large.data"
+soybean <-  as.data.frame(read.table(file = url, header = FALSE, dec = ".", sep = ","))
+#colnames(ecoli) <- c("Sequence Name", "mcg", "gvh", "lip", "chg", "aac", "alm1", "alm2","class")
+colnames(soybean)[1] <- "class"
+soybean
+```
+```{r}
+library(mlr)
+# creatw task
+train.task <- makeClassifTask(data = soybean, target = "class")
+var_imp <- generateFilterValuesData(train.task, method = "gain.ratio")
+var_imp[2]
+plotFilterValues(var_imp, feat.type.cols = TRUE)
+```
+```{r}
+library(mlr)
+
+train.task <- makeClassifTask(data = soybean, target = "class")
+var_imp <- generateFilterValuesData(train.task, method = "chi.squared")
+
+plotFilterValues(var_imp, feat.type.cols = TRUE)
+```
+```{r}
+soybean.n =soybean[-c(7,11)]
+soybean.n
+function_cv_nbc(yourData = soybean)
+function_cv_nbc(yourData = soybean.n) 
+```
+```{r}
+#Getting Dataset
+url= "https://archive.ics.uci.edu/ml/machine-learning-databases/breast-cancer-wisconsin/breast-cancer-wisconsin.data"
+cancer <-  as.data.frame(read.table(file = url, header = FALSE, dec = ".", sep = ","))
+#colnames(ecoli) <- c("Sequence Name", "mcg", "gvh", "lip", "chg", "aac", "alm1", "alm2","class")
+colnames(cancer)[11] <- "class"
+cancer[11] <- as.factor(x = cancer [[11]])
+library(plyr)
+cancer$class <- revalue(cancer$class, c("2" = "benign", "4" = "malignant" ))
+cancer = cancer[-1]
+cancer
+```
+```{r}
+library(mlr)
+# creatw task
+train.task <- makeClassifTask(data = cancer, target = "class")
+var_imp <- generateFilterValuesData(train.task, method = "gain.ratio")
+var_imp[2]
+plotFilterValues(var_imp, feat.type.cols = TRUE)
+```
+```{r}
+
+library(corrplot)
+corrplot(cor(cancer[-c(6,10)]), order = "hclust")
+```
+```{r}
+cancer.n =cancer[-c(4)]
+cancer.s <- cancer[c( "V3","V4","V5","V7","V8","V10","class")] 
+function_cv_nbc(yourData = cancer)
+function_cv_nbc(yourData = cancer.s)
+function_cv_nbc(yourData = cancer.n) 
+```
+```{r}
+#Getting Dataset
+url= "https://archive.ics.uci.edu/ml/machine-learning-databases/voting-records/house-votes-84.data"
+vote <-  as.data.frame(read.table(file = url, header = FALSE, dec = ".", sep = ","))
+#colnames(ecoli) <- c("Sequence Name", "mcg", "gvh", "lip", "chg", "aac", "alm1", "alm2","class")
+colnames(vote)[1] <- "class"
+vote
+```
+```{r}
+library(mlr)
+# creatw task
+train.task <- makeClassifTask(data = vote, target = "class")
+var_imp <- generateFilterValuesData(train.task, method = "gain.ratio")
+var_imp[2]
+plotFilterValues(var_imp, feat.type.cols = TRUE)
+```
+```{r}
+library(mlr)
+train.task <- makeClassifTask(data = vote, target = "class")
+var_imp <- generateFilterValuesData(train.task, method = "chi.squared")
+plotFilterValues(var_imp, feat.type.cols = TRUE)
+```
+```{r}
+vote.n =vote[c("V5","V4","V6","class")]
+function_cv_nbc(yourData = vote)
+function_cv_nbc(yourData = vote.n) 
+```
+
+
+
+
+
+
+
+

@@ -1,0 +1,133 @@
+---
+title: "Functions"
+output: html_document
+---
+```{r}
+function_c4.5 <- function(data,train_percent){
+  #Installing Caret Package
+  library(caret)
+  c4.5_list = c()
+  for (i in 1:10){
+    accuracy_list1 = c()
+    for (j in 1:15){
+      set.seed(j*10)
+      #Data Partitioning
+      trainIndices <- createDataPartition(y = data$class, p=train_percent[i], list = FALSE)
+      #trainIndices = sample(1:nrow(ecoli),nrow(ecoli)*0.8)
+      trainset <- data[trainIndices, ]
+      testset <- data[-trainIndices, ]
+      
+    #C4.5
+      # Installing Weka Package for C4.5 Algorithm
+      library(RWeka)
+      # Applying J48 from RWeka package
+      C4.5 <- J48(class ~., data = trainset)
+      # Making predictions
+      prediction1 <- predict(C4.5, testset, type="class")
+      # Creating Confusion Matrix
+      cm1 <- table(testset$class, prediction1, dnn = c("Real Values", "Predictions"))
+      #Calculating Accuracy
+      n1 = diag(cm1)
+      accuracy1 <- sum(n1)/sum(cm1)
+      accuracy_list1[j] = accuracy1
+    
+    }
+    a1 = sum(accuracy_list1)/15
+    c4.5_list[i] = a1
+  }
+  return(c4.5_list)
+}
+```
+
+
+```{r}
+function_nbc <- function(data,train_percent){
+  #Installing Caret Package
+  library(caret)
+  nbc_list = c()
+  for (i in 1:10){
+    accuracy_list2 = c()
+    for (j in 1:15){
+      set.seed(j*10)
+      #Data Partitioning
+      trainIndices <- createDataPartition(y = data$class, p=train_percent[i], list = FALSE)
+      #trainIndices = sample(1:nrow(ecoli),nrow(ecoli)*0.8)
+      trainset <- data[trainIndices, ]
+      testset <- data[-trainIndices, ]
+      
+    #Naive Bayes Classifier
+      # Installing e1071
+      library(e1071)
+      # Applying Naive Bayes
+      nbc <- naiveBayes(class ~., data =trainset )
+      # Making predictions
+      prediction2 <- predict(nbc, testset, type="class")
+      cm2 <- table(testset$class, prediction2, dnn = c("Real Values", "Predictions"))
+      #Calculating Accuracy
+      n2 = diag(cm2)
+      accuracy2 <- sum(n2)/sum(cm2)
+      accuracy_list2[j] = accuracy2
+    }
+    a2 = sum(accuracy_list2)/15
+    nbc_list[i] = a2
+  }
+  return(nbc_list)
+}
+```
+
+```{r}
+function_cv_c4.5 <- function(yourData){
+  require(caret)
+  folds<-createFolds(y=yourData$class,k=5)
+  accuracy_list1=c()
+#Perform 5 fold cross validation
+for(i in 1:5){
+    #Segement your data by fold using the which() function 
+    train_cv<-yourData[-folds[[i]],]
+    test_cv<-yourData[folds[[i]],]
+     #C4.5
+      # Installing Weka Package for C4.5 Algorithm
+      library(RWeka)
+      # Applying J48 from RWeka package 
+      C4.5 <- J48(class ~., data = train_cv)
+      # Making predictions
+      prediction1 <- predict(C4.5, test_cv, type="class")
+      # Creating Confusion Matrix
+      cm1 <- table(test_cv$class, prediction1, dnn = c("Real Values", "Predictions"))
+      #Calculating Accuracy
+      n1 = diag(cm1)
+      accuracy1 <- sum(n1)/sum(cm1)
+      accuracy_list1[i] = accuracy1
+}
+a1 = sum(accuracy_list1)/5
+return(a1)
+}
+```
+
+```{r}
+function_cv_nbc <- function(yourData){
+  require(caret)
+  folds<-createFolds(y=yourData$class,k=5)
+  accuracy_list2=c()
+#Perform 5 fold cross validation
+for(i in 1:5){
+    #Segement your data by fold using the which() function 
+    train_cv<-yourData[-folds[[i]],]
+    test_cv<-yourData[folds[[i]],]
+     #Naive Bayes Classifier
+      # Installing e1071
+      library(e1071)
+      # Applying Naive Bayes
+      nbc <- naiveBayes(class ~., data =train_cv )
+      # Making predictions
+      prediction2 <- predict(nbc, test_cv, type="class")
+      cm2 <- table(test_cv$class, prediction2, dnn = c("Real Values", "Predictions"))
+      #Calculating Accuracy
+      n2 = diag(cm2)
+      accuracy2 <- sum(n2)/sum(cm2)
+      accuracy_list2[i] = accuracy2
+}
+a2 = sum(accuracy_list2)/5
+return(a2)
+}
+```
